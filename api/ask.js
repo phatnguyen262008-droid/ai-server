@@ -1,28 +1,25 @@
 export const runtime = "nodejs";
 
 export default async function handler(req) {
+  // 1. Define common headers
+  const headers = {
+    "Access-Control-Allow-Origin": "*", // Or "https://phatnguyen262008-droid.github.io" for security
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Content-Type": "application/json",
+  };
 
+  // 2. Handle Preflight (OPTIONS)
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
-      }
-    });
+    return new Response(null, { status: 204, headers });
   }
 
+  // 3. Handle incorrect methods
   if (req.method !== "POST") {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      {
-        status: 405,
-        headers: {
-          "Access-Control-Allow-Origin": "*"
-        }
-      }
-    );
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers,
+    });
   }
 
   try {
@@ -34,31 +31,24 @@ export default async function handler(req) {
         method: "POST",
         headers: {
           Authorization: `Bearer ${process.env.OPENROUTER_KEY}`,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       }
     );
 
     const data = await response.json();
 
+    // 4. Return successful response with headers
     return new Response(JSON.stringify(data), {
       status: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Content-Type": "application/json"
-      }
+      headers,
     });
 
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: "Server error" }),
-      {
-        status: 500,
-        headers: {
-          "Access-Control-Allow-Origin": "*"
-        }
-      }
-    );
+    return new Response(JSON.stringify({ error: "Server error", details: error.message }), {
+      status: 500,
+      headers,
+    });
   }
 }
