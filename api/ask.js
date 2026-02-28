@@ -1,4 +1,5 @@
 export default async function handler(req, res) {
+  // 1. Cấu hình CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -7,33 +8,35 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    // Ép buộc sử dụng model Gemini 2.0 Flash Free để kiểm tra xem có chạy không
-    const payload = {
-      model: "google/gemini-2.0-flash-exp:free",
-      messages: req.body.messages, // Chỉ lấy mảng tin nhắn từ web gửi lên
-    };
+    // 2. Lấy dữ liệu từ frontend gửi lên
+    const { messages } = req.body;
 
+    // 3. Gọi OpenRouter với đầy đủ Header bắt buộc
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.OPENROUTER_KEY}`,
+        "Authorization": `Bearer ${process.env.OPENROUTER_KEY}`, // Đã khớp với ảnh Vercel của bạn
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/", // Yêu cầu bắt buộc của OpenRouter
-        "X-Title": "AI Hoc Tap"
+        "HTTP-Referer": "https://thptlqd-12a1.vercel.app", // BẮT BUỘC ĐỂ DÙNG MODEL FREE
+        "X-Title": "AI Hoc Tap Le Quy Don" // Tùy chọn nhưng nên có
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        model: "google/gemini-2.0-flash-exp:free", // Dùng model ổn định nhất hiện nay
+        messages: messages
+      })
     });
 
     const data = await response.json();
-    
-    // Nếu OpenRouter trả về lỗi, chuyển lỗi đó về cho trình duyệt xem luôn
+
+    // Kiểm tra nếu API trả về lỗi
     if (data.error) {
-       return res.status(400).json({ error_from_api: data.error });
+      console.error("Lỗi API:", data.error);
+      return res.status(data.error.code || 400).json(data);
     }
 
     return res.status(200).json(data);
 
   } catch (error) {
-    return res.status(500).json({ error: "Lỗi kết nối Server: " + error.message });
+    return res.status(500).json({ error: "Lỗi Server Vercel: " + error.message });
   }
 }
