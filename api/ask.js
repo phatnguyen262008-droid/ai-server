@@ -1,39 +1,64 @@
-export const config = {
-  runtime: "nodejs"
-};
+export const runtime = "nodejs";
 
-export default async function handler(req, res) {
+export default async function handler(req) {
 
-  // ✅ CORS FIX
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-  // ✅ Handle preflight request
   if (req.method === "OPTIONS") {
-    return res.status(200).end();
+    return new Response(null, {
+      status: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type"
+      }
+    });
   }
 
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      {
+        status: 405,
+        headers: {
+          "Access-Control-Allow-Origin": "*"
+        }
+      }
+    );
   }
 
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.OPENROUTER_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(req.body)
-    });
+    const body = await req.json();
+
+    const response = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      }
+    );
 
     const data = await response.json();
 
-    return res.status(200).json(data);
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json"
+      }
+    });
 
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Server error" });
+    return new Response(
+      JSON.stringify({ error: "Server error" }),
+      {
+        status: 500,
+        headers: {
+          "Access-Control-Allow-Origin": "*"
+        }
+      }
+    );
   }
 }
