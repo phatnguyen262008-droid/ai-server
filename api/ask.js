@@ -1,66 +1,48 @@
-export const runtime = "nodejs";
+export default async function handler(req, res) {
+  // CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-export default async function handler(req) {
-  // 1. Define common headers
-  const headers = {
-    "Access-Control-Allow-Origin": "*", // Or "https://phatnguyen262008-droid.github.io" for security
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Content-Type": "application/json",
-  };
-
-  // 2. Handle Preflight (OPTIONS)
+  // Handle preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers });
+    return res.status(200).end();
   }
 
-  // 3. Handle incorrect methods
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers,
-    });
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const body = await req.json();
-
     const response = await fetch(
-  "https://openrouter.ai/api/v1/chat/completions",
-  {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.OPENROUTER_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  }
-);
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.OPENROUTER_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(req.body),
+      }
+    );
 
-const text = await response.text();
+    const text = await response.text();
 
-if (!response.ok) {
-  return new Response(
-    JSON.stringify({
-      error: "OpenRouter error",
-      status: response.status,
-      details: text,
-    }),
-    { status: response.status, headers }
-  );
-}
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: "OpenRouter error",
+        details: text,
+      });
+    }
 
-const data = JSON.parse(text);
+    const data = JSON.parse(text);
 
-return new Response(JSON.stringify(data), {
-  status: 200,
-  headers,
-});
+    return res.status(200).json(data);
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: "Server error", details: error.message }), {
-      status: 500,
-      headers,
+    return res.status(500).json({
+      error: "Server error",
+      details: error.message,
     });
   }
 }
