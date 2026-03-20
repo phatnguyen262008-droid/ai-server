@@ -15,11 +15,11 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
+      "https://api.deepseek.com/chat/completions",
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_KEY}`,
+          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(req.body),
@@ -30,15 +30,13 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       return res.status(response.status).json({
-        error: "OpenRouter error",
+        error: "DeepSeek error",
         details: text,
       });
     }
 
     const data = JSON.parse(text);
-
     return res.status(200).json(data);
-
   } catch (error) {
     return res.status(500).json({
       error: "Server error",
