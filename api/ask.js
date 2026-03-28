@@ -1,10 +1,8 @@
 export default async function handler(req, res) {
-  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
-  // Handle preflight
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
@@ -14,17 +12,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch(
-      "https://api.deepseek.com/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(req.body),
-      }
-    );
+    const incoming = req.body || {};
+    const safeModel =
+      incoming.model === "deepseek-reasoner"
+        ? "deepseek-reasoner"
+        : "deepseek-chat";
+
+    const response = await fetch("https://api.deepseek.com/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...incoming,
+        model: safeModel,
+      }),
+    });
 
     const text = await response.text();
 
@@ -35,8 +39,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const data = JSON.parse(text);
-    return res.status(200).json(data);
+    return res.status(200).json(JSON.parse(text));
   } catch (error) {
     return res.status(500).json({
       error: "Server error",
